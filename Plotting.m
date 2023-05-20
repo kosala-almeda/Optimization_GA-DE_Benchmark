@@ -43,8 +43,6 @@ classdef Plotting
             ylabel('f(x)');
             title(func2str(f));
         end
-
-        
     end
 
 end
