@@ -9,7 +9,7 @@ classdef DifferentialEvolution
         SCALE_FACTOR = 0.8;
         DIMENSION_RANGE = [-10 10];
     end
-    
+     
     properties
         % Differential Evolution variables
         objectiveFunction;
@@ -156,6 +156,10 @@ classdef DifferentialEvolution
         function trial = crossover(obj, target, mutant)
             % Perform crossover between the target and mutant individuals
             mask = rand(size(target)) < obj.CROSSOVER_RATE;
+            % atleast one gene should be different
+            if ~any(mask)
+                mask(randi(obj.numDimensions)) = true;
+            end
             trial = target;
             trial(mask) = mutant(mask);
         end

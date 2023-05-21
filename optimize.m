@@ -5,13 +5,18 @@ clear;
 close all;
 
 
-fun = @Benchmark.ackley;
-alg = @GeneticAlgorithm;
-D = 2;
+fun = @Benchmark.weierstrass;
+alg = @DifferentialEvolution;
+D = 20;
 
-% runMultipleTimes(fun, alg, D);
-runAndPlot(fun, alg);
+time = tic;
+
+runMultipleTimes(fun, alg, D);
+% runAndPlot(fun, alg);
 % summary = runAll(); display(summary);
+
+toc(time)
+
 
 function summary = runAll()
     funcs = {
@@ -47,7 +52,7 @@ end
 
 function [best, avg, stdv] = runMultipleTimes(fun, alg, D)
 
-    fprintf('%s , %s , dimensions = %d', func2str(fun), func2str(alg), D);
+    fprintf('\n%s , %s , dimensions = %d\n', func2str(fun), func2str(alg), D);
 
     % run 31 times and plot the best individual in  each iteration
     hold on;
