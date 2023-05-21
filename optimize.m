@@ -5,18 +5,53 @@ clear;
 close all;
 
 
-fun = @Benchmark.rosenbrock;
-alg = @DifferentialEvolution;
+fun = @Benchmark.ackley;
+alg = @GeneticAlgorithm;
 D = 2;
 
 % runMultipleTimes(fun, alg, D);
-runAndPlot(fun, alg, D);
+runAndPlot(fun, alg);
+% summary = runAll(); display(summary);
 
-function runMultipleTimes(fun, alg, D)
+function summary = runAll()
+    funcs = {
+            @Benchmark.elliptic ...
+            @Benchmark.bentcigar ...
+            @Benchmark.discus ...
+            @Benchmark.rosenbrock ...
+            @Benchmark.ackley ...
+            @Benchmark.weierstrass ...
+            @Benchmark.griewank ...
+            @Benchmark.rastrigin
+        };
+
+    dims = [ 2 10 20 ];
+    algs = { @GeneticAlgorithm @DifferentialEvolution };
+    
+    summary = [];
+    
+    figure('units','normalized','outerposition',[0.1 0 0.8 1]);
+    for d = dims
+        for f = funcs
+            for a = algs
+                [bf, af, sf] = runMultipleTimes(cell2mat(f), cell2mat(a), d);
+                summary = [summary; [ d, f, a, bf, af, sf]];
+                saveas(gcf, sprintf('plots/fitness_%d_%s_%s.png', d, func2str(cell2mat(f)) ...
+                   , func2str(cell2mat(a))));
+            end
+        end
+    end
+end
+
+
+
+function [best, avg, stdv] = runMultipleTimes(fun, alg, D)
+
+    fprintf('%s , %s , dimensions = %d', func2str(fun), func2str(alg), D);
 
     % run 31 times and plot the best individual in  each iteration
-    figure;
     hold on;
+    cla;
     overallBestFitness = zeros(1,31);
     for i = 1:31
         % ge = DifferentialEvolution(fun, 2);
@@ -29,9 +64,12 @@ function runMultipleTimes(fun, alg, D)
         % do not clear existing figure
         plot(nfc,bestFitness, 'DisplayName', sprintf('Run %d', i));
         title('Best Fitness in each iteration');
-        subtitle(sprintf('%s , dimensions = %d', func2str(fun), ge.numDimensions));
+        funcstr = regexprep(func2str(fun), '.*\.', '');
+        funcstr(1) = upper(funcstr(1));
+        subtitle(sprintf('%s , %s , dimensions = %d',  funcstr , ...
+             class(ge), ge.numDimensions));
         xlabel('Number of fitness calls');
-        ylabel('Fitness (log scale)');
+        ylabel('Best Fitness (log scale)');
         set(gca, 'YScale', 'log');
 
         % show legend outside the plot
@@ -54,12 +92,12 @@ function runMultipleTimes(fun, alg, D)
 
 end
 
-function runAndPlot(fun, alg, D)
+function runAndPlot(fun, alg)
     
     ge = alg(fun, 2);
 
     % Open maximized figure window
-    figure('units','normalized','outerposition',[0 0 1 1]);
+    figure('units','normalized','outerposition',[0.1 0 0.7 1]);
     Plotting.plotFunction3Dto2D(ge.objectiveFunction,[-10:.1:+10], [-10:.1:+10]);
     
     % run a step plot ant wait
@@ -97,4 +135,22 @@ function plotall(ge)
     scatter(bestIndividual(1), bestIndividual(2),'r*')
 
     hold off;
+
+    % save to file
+    % saveas(gcf, sprintf('plots/%s_%s_%d.png', func2str(ge.objectiveFunction) ...
+    %     , class(ge), ge.generation));
+
+    % save as an animated gif
+    frame = getframe(1);
+    im = frame2im(frame);
+    [imind,cm] = rgb2ind(im,256);
+    outfile = sprintf('plots/%s_%s.gif', func2str(ge.objectiveFunction) ...
+        , class(ge));
+    if ge.generation == 1
+        imwrite(imind,cm,outfile,'gif', 'Loopcount',inf);
+    else
+        imwrite(imind,cm,outfile,'gif','WriteMode','append');
+    end
+
+
 end

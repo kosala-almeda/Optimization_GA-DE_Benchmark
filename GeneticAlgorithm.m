@@ -11,8 +11,8 @@ classdef GeneticAlgorithm
         MAX_FITNESS_EVALUATIONS = 3000;
         CROSSOVER_RATE = 0.9;
         MUTATION_RATE = 0.01;
-        TOURNAMENT_SIZE = 3;
-        CHROMASOME_LENGTH_PER_DIMENSION = 10;
+        TOURNAMENT_SIZE = 2;
+        CHROMASOME_LENGTH_PER_DIMENSION = 24;
         DIMENSION_RANGE = [-10 10];
     end
     
@@ -137,7 +137,6 @@ classdef GeneticAlgorithm
         function parent = selectParent(obj)
             % Select a parent for crossover
             % Tournament selection for minimization
-            % randomize the tournament size to give a chance for all
             tournament = randi(obj.POPULATION_SIZE, 1, obj.TOURNAMENT_SIZE);
             % find the best individual in the tournament 
             % (its the lowest index as the population is sorted)
