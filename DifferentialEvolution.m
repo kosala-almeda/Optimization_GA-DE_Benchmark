@@ -6,8 +6,7 @@ classdef DifferentialEvolution
         MAX_GENERATIONS = 1000;
         MAX_FITNESS_EVALUATIONS = 3000;
         CROSSOVER_RATE = 0.9;
-        MUTATION_RATE = 0.5;
-        SCALE_FACTOR = 0.5;
+        SCALE_FACTOR = 0.8;
         DIMENSION_RANGE = [-10 10];
     end
     
@@ -36,23 +35,23 @@ classdef DifferentialEvolution
         end
         
         % Run the Differential Evolution algorithm
-        function [obj, bestIndividuals, bestFitness] = run(obj, log)
+        function [obj, bestIndividuals, bestFitnesses] = run(obj, log)
             if nargin < 2
                 log = false;
             end
             % Run the Differential Evolution algorithm
             obj = obj.runSingleStep(log);
             bestIndividuals = [];
-            bestFitness = [];
+            bestFitnesses = [];
             % evolve and evaluate
             while obj.generation < obj.MAX_GENERATIONS
-                % show the best fitness
+                % store the best fitness and individual
+                bestIndividuals = [bestIndividuals; obj.bestIndividual];
+                bestFitnesses = [bestFitnesses; obj.bestFitness];
                 if obj.numFitnessCalls >= obj.MAX_FITNESS_EVALUATIONS
                     break;
                 end
                 obj = obj.runSingleStep(log);
-                bestIndividuals = [bestIndividuals; obj.bestIndividual];
-                bestFitness = [bestFitness; obj.bestFitness];
             end
         end
         
@@ -61,7 +60,7 @@ classdef DifferentialEvolution
             if nargin < 2
                 log = false;
             end
-            % Run a single step of the Differential Evolution algorithm
+            % Generate the initial population or evolve the current population
             if obj.generation == 0
                 obj = obj.initializePopulation();
                 obj = obj.evaluatePopulation();
@@ -69,6 +68,8 @@ classdef DifferentialEvolution
                 obj = obj.evolvePopulation();
                 obj = obj.evaluatePopulation();
             end
+
+            % logging
             if log
                 fprintf('Generation: %d, NFC: %d\n', obj.generation, obj.numFitnessCalls);
                 fprintf('Best individual:\n');
@@ -80,12 +81,11 @@ classdef DifferentialEvolution
             end
         end
         
-        % Initialize the population randomly
+        % Initialize the population with random individuals
         function obj = initializePopulation(obj)
-            % Initialize the population
+            % Generate a new population
             obj.population = rand(obj.POPULATION_SIZE, obj.numDimensions) ...
-                * (obj.DIMENSION_RANGE(2) - obj.DIMENSION_RANGE(1)) ...
-                + obj.DIMENSION_RANGE(1);
+                * (obj.DIMENSION_RANGE(2) - obj.DIMENSION_RANGE(1)) + obj.DIMENSION_RANGE(1);
             obj.generation = 1;
         end
         
@@ -143,6 +143,13 @@ classdef DifferentialEvolution
             % Mutate the target individual (rand/1/bin)
             difference = obj.SCALE_FACTOR * (parent2 - parent3);
             mutant = parent1 + difference;
+
+            % WRAPPING: enter from the otherside if outside the range
+            mask = mutant < obj.DIMENSION_RANGE(1);
+            mutant(mask) = obj.DIMENSION_RANGE(2) - (obj.DIMENSION_RANGE(1) - mutant(mask));
+            mask = mutant > obj.DIMENSION_RANGE(2);
+            mutant(mask) = obj.DIMENSION_RANGE(1) + (mutant(mask) - obj.DIMENSION_RANGE(2));
+
         end
         
         % Perform crossover between the target and mutant individuals

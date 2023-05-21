@@ -37,54 +37,65 @@ classdef GeneticAlgorithm
             obj.numFitnesscalls = 0;
             obj.objectiveFunction = objectiveFunction;
             obj.numDimensions = numDimensions;
-            obj.population = zeros(obj.POPULATION_SIZE, obj.CHROMASOME_LENGTH_PER_DIMENSION * obj.numDimensions);
+            obj.population = zeros(obj.POPULATION_SIZE ...
+                , obj.CHROMASOME_LENGTH_PER_DIMENSION * obj.numDimensions);
         end
         
-        % Run the Genetic Algorithm simple
-        function [obj, bestIndividuals, bestFitness] = run(obj, log)
+        % Run the Genetic Algorithm 
+        function [obj, bestIndividuals, bestFitnesses] = run(obj, log)
             if nargin < 2
                 log = false;
             end
             % Run the Genetic Algorithm
             obj = obj.runSingleStep(log);
             bestIndividuals = [];
-            bestFitness = [];
+            bestFitnesses = [];
             % evolve and evaluate
             while obj.generation < obj.MAX_GENERATIONS
-                % show the best fitness
+                % store the best fitness and individual
+                bestIndividuals = [bestIndividuals; obj.decode(obj.bestIndividual)];
+                bestFitnesses = [bestFitnesses; obj.bestFitness];
                 if obj.numFitnesscalls >= obj.MAX_FITNESS_EVALUATIONS * obj.numDimensions
                     break;
                 end
                 obj = runSingleStep(obj, log);
-                bestIndividuals = [bestIndividuals; obj.decode(obj.bestIndividual)];
-                bestFitness = [bestFitness; obj.bestFitness];
             end
         end
         
-        % Run the Genetic Algorithm single step
+        % Run a single step of the Genetic Algorithm
         function obj = runSingleStep(obj, log)
             if nargin < 2
                 log = false;
             end
-            % Run the Genetic Algorithm
+            % Generate the initial population or evolve the current population
             if obj.generation == 0
-                obj = obj.generatePopulation();
+                obj = obj.initializePopulation();
                 obj = obj.evaluatePopulation();
             else
                 obj = obj.evolvePopulation();
                 obj = obj.evaluatePopulation();
             end
+
+            % logging
             if log
                 fprintf('Generation: %d , NFC: %d\n', obj.generation, obj.numFitnesscalls);
                 fprintf('Best individual:\n')
-                fprintf('\tchromasome: ');
+                fprintf('\tGenes: ');
                 fprintf('%d', obj.bestIndividual);
-                fprintf('\n\tfitness: %f', obj.bestFitness);
                 fprintf('\tdimensions: ');
                 fprintf('%f ', obj.decode(obj.bestIndividual));
+                fprintf('\n\tFitness: %f', obj.bestFitness);
                 fprintf('\n')
                 fprintf('----------------------------------------\n');
             end
+        end
+        
+        % Initialize the population with random individuals
+        function obj = initializePopulation(obj)
+            % Generate a new population
+            obj.population = randi([0 1], obj.POPULATION_SIZE ...
+                , obj.numDimensions * obj.CHROMASOME_LENGTH_PER_DIMENSION);
+            obj.generation = 1;
         end
         
         % Evaluate and sort the population by fitness
@@ -128,7 +139,8 @@ classdef GeneticAlgorithm
             % Tournament selection for minimization
             % randomize the tournament size to give a chance for all
             tournament = randi(obj.POPULATION_SIZE, 1, obj.TOURNAMENT_SIZE);
-            % find the best individual in the tournament (its the lowest index as the population is sorted)
+            % find the best individual in the tournament 
+            % (its the lowest index as the population is sorted)
             i = min(tournament);
             parent = obj.population(i, :);
         end
@@ -155,14 +167,6 @@ classdef GeneticAlgorithm
             end
         end
         
-        function obj = generatePopulation(obj)
-            % Generate a population
-            for i = 1:obj.POPULATION_SIZE
-                obj.population(i, :) = randi([0 1], 1, obj.numDimensions * obj.CHROMASOME_LENGTH_PER_DIMENSION);
-            end
-            obj.generation = 1;
-        end
-        
         function fitness = fitness(obj, individual)
             % Fitness function
             % Decode the gene using number of dimnesions and range
@@ -174,7 +178,8 @@ classdef GeneticAlgorithm
         function x = decode(obj, individual)
             % Decode the gene
             % split the gene into dimensions
-            dimensions = reshape(individual, obj.numDimensions, obj.CHROMASOME_LENGTH_PER_DIMENSION);
+            dimensions = reshape(individual, obj.numDimensions ...
+                , obj.CHROMASOME_LENGTH_PER_DIMENSION);
             geneMax = 2^obj.CHROMASOME_LENGTH_PER_DIMENSION - 1;
             range = obj.DIMENSION_RANGE(2) - obj.DIMENSION_RANGE(1);
             
@@ -190,11 +195,6 @@ classdef GeneticAlgorithm
                 x(i) = obj.DIMENSION_RANGE(1) + range * xi / geneMax;
             end
         end
-        
-        function displayIndividual(obj, individual)
-            % Display the individual
-            fprintf('fitness = %f x = ', obj.fitness(individual));
-            disp(obj.decode(individual));
-        end
     end
 end
+
