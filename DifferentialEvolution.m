@@ -35,24 +35,24 @@ classdef DifferentialEvolution
         end
         
         % Run the Differential Evolution algorithm
-        function [obj, bestIndividuals, bestFitnesses] = run(obj, log)
+        function [obj, bestIndividual, bestFitnesses] = run(obj, log)
             if nargin < 2
                 log = false;
             end
             % Run the Differential Evolution algorithm
             obj = obj.runSingleStep(log);
-            bestIndividuals = [];
-            bestFitnesses = [];
+            bestFitnesses = inf(obj.MAX_GENERATIONS);
             % evolve and evaluate
             while obj.generation < obj.MAX_GENERATIONS
                 % store the best fitness and individual
-                bestIndividuals = [bestIndividuals; obj.bestIndividual];
-                bestFitnesses = [bestFitnesses; obj.bestFitness];
-                if obj.numFitnessCalls >= obj.MAX_FITNESS_EVALUATIONS
+                bestIndividual = obj.bestIndividual;
+                bestFitnesses(obj.generation) = obj.bestFitness;
+                if obj.numFitnessCalls >= obj.MAX_FITNESS_EVALUATIONS * obj.numDimensions
                     break;
                 end
                 obj = obj.runSingleStep(log);
             end
+            bestFitnesses = bestFitnesses(1:obj.generation);
         end
         
         % Run a single step of the Differential Evolution algorithm
@@ -95,7 +95,7 @@ classdef DifferentialEvolution
             popFitness = zeros(1, obj.POPULATION_SIZE);
             for i = 1:obj.POPULATION_SIZE
                 popFitness(i) = obj.fitness(obj.population(i, :));
-                obj.numFitnessCalls = obj.numFitnessCalls + 1;
+                obj.numFitnessCalls = obj.numFitnessCalls + 1; % finess calcualtion for gen
             end
             % Sort the population by fitness
             [popFitness, index] = sort(popFitness);
@@ -109,7 +109,11 @@ classdef DifferentialEvolution
         function obj = evolvePopulation(obj)
             % Evolve the population
             obj.generation = obj.generation + 1;
-            newPopulation = obj.population;
+            trialPopulation = obj.population;
+            mainFitness = zeros(1, obj.POPULATION_SIZE);
+            trialFitness = zeros(1, obj.POPULATION_SIZE);
+            
+            % Generate trial population
             for i = 1:obj.POPULATION_SIZE
                 % Select parents
                 parents = obj.selectParents(i);
@@ -120,13 +124,17 @@ classdef DifferentialEvolution
                 mutant = obj.mutate(parent1, parent2, parent3);
                 % Crossover
                 trial = obj.crossover(obj.population(i, :), mutant);
-                % Select between the trial and the target
-                target = obj.population(i, :);
-                if obj.fitness(trial) <= obj.fitness(target)
-                    newPopulation(i, :) = trial;
-                end
+                trialPopulation(i, :) = trial;
+
+                % Evaluate fitness for main population and trial population
+                mainFitness(i) = obj.fitness(obj.population(i, :));
+                trialFitness(i) = obj.fitness(trial);
+                obj.numFitnessCalls = obj.numFitnessCalls + 1; % finess calcualtion for trial
             end
-            obj.population = newPopulation;
+            
+            % Select between trial population and main population using logical indexing
+            replaceIndices = trialFitness <= mainFitness;
+            obj.population(replaceIndices, :) = trialPopulation(replaceIndices, :);
         end
         
         % Select parents for mutation

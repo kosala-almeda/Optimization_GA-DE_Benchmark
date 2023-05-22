@@ -5,15 +5,15 @@ clear;
 close all;
 
 
-fun = @Benchmark.weierstrass;
-alg = @DifferentialEvolution;
+fun = @Benchmark.rastrigin;
+alg = @GeneticAlgorithm;
 D = 20;
 
 time = tic;
 
-runMultipleTimes(fun, alg, D);
+% runMultipleTimes(fun, alg, D);
 % runAndPlot(fun, alg);
-% summary = runAll(); display(summary);
+summary = runAll(); display(summary);
 
 toc(time)
 
@@ -38,36 +38,71 @@ function summary = runAll()
     figure('units','normalized','outerposition',[0.1 0 0.8 1]);
     for d = dims
         for f = funcs
+            bestHistories = containers.Map('KeyType','char','ValueType','any');
             for a = algs
-                [bf, af, sf] = runMultipleTimes(cell2mat(f), cell2mat(a), d);
+                [bf, af, sf, bestHistory] = runMultipleTimes(cell2mat(f), cell2mat(a), d);
                 summary = [summary; [ d, f, a, bf, af, sf]];
                 saveas(gcf, sprintf('plots/fitness_%d_%s_%s.png', d, func2str(cell2mat(f)) ...
                    , func2str(cell2mat(a))));
+                bestHistories(func2str(cell2mat(a))) = bestHistory;
             end
+                
+            % plot histories as multiple lines
+            hold on;
+            cla;
+            % loop over map keys
+            for k = keys(bestHistories)
+                % get the value of the key
+                v = bestHistories(k{1});
+                % plot the best fitness chart in each iteration
+                if strcmp(k{1}, 'DifferentialEvolution')
+                    nfc = (0:length(v)-1)*200;
+                else
+                    nfc = (0:length(v)-1)*100;
+                end
+                plot(nfc,v, 'DisplayName', k{1});
+            end
+            title('Best Fitness in each iteration');
+            funcstr = regexprep(func2str(cell2mat(f)), '.*\.', '');
+            funcstr(1) = upper(funcstr(1));
+            subtitle(sprintf('%s , dimensions = %d',  funcstr , d));
+            xlabel('Number of fitness calls');
+            ylabel('Best Fitness (log scale)');
+            set(gca, 'YScale', 'log');
+            set(gca, 'XMinorTick', 'on');
+            % show legend outside the plot
+            legend('Location', 'eastoutside');
+            hold off;
+            saveas(gcf, sprintf('plots/fitness_%d_%s.png', d, func2str(cell2mat(f))));
+
+        
         end
     end
 end
 
 
 
-function [best, avg, stdv] = runMultipleTimes(fun, alg, D)
+function [best, avg, stdv, bestHistoryRun] = runMultipleTimes(fun, alg, D)
 
     fprintf('\n%s , %s , dimensions = %d\n', func2str(fun), func2str(alg), D);
 
     % run 31 times and plot the best individual in  each iteration
     hold on;
     cla;
-    overallBestFitness = zeros(1,31);
+    overallBestFitness = inf(1,31);
     for i = 1:31
         % ge = DifferentialEvolution(fun, 2);
         ge = alg(fun, D);
-        [ge, bestIndividuals, bestFitness] = ge.run();
+        [ge, ~, bestFitnessHistory] = ge.run();
 
-        nfc = (0:length(bestFitness)-1)*ge.POPULATION_SIZE;
+        nfc = (0:length(bestFitnessHistory)-1)*ge.POPULATION_SIZE;
+        if isa(ge, 'DifferentialEvolution')
+            nfc = nfc * 2;
+        end
 
         % plot the best fitness chart in each iteration
         % do not clear existing figure
-        plot(nfc,bestFitness, 'DisplayName', sprintf('Run %d', i));
+        plot(nfc,bestFitnessHistory, 'DisplayName', sprintf('Run %d', i));
         title('Best Fitness in each iteration');
         funcstr = regexprep(func2str(fun), '.*\.', '');
         funcstr(1) = upper(funcstr(1));
@@ -76,12 +111,17 @@ function [best, avg, stdv] = runMultipleTimes(fun, alg, D)
         xlabel('Number of fitness calls');
         ylabel('Best Fitness (log scale)');
         set(gca, 'YScale', 'log');
+        set(gca, 'XMinorTick', 'on');
 
         % show legend outside the plot
         legend('Location', 'eastoutside');
         
-        overallBestFitness(i) = bestFitness(end);
-        fprintf('Run %d: Best fitness = %f\n', i, bestFitness(end));
+        overallBestFitness(i) = bestFitnessHistory(end);
+        fprintf('Run %d: Best fitness = %f\n', i, bestFitnessHistory(end));
+
+        if bestFitnessHistory(end) == min(overallBestFitness)
+            bestHistoryRun = bestFitnessHistory;
+        end
     end
     hold off;
 

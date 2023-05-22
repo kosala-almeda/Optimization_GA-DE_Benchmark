@@ -11,7 +11,9 @@ classdef GeneticAlgorithm
         MAX_FITNESS_EVALUATIONS = 3000;
         CROSSOVER_RATE = 0.9;
         MUTATION_RATE = 0.01;
-        TOURNAMENT_SIZE = 2;
+        ELITISM = true; % preserve the best individual
+        TOURNAMENT_SIZE = 2; % 1 = random, >1 = tournament
+        ALTENATE_ENCODING = false; % use alternate encoding or adjacent encoding
         CHROMASOME_LENGTH_PER_DIMENSION = 24;
         DIMENSION_RANGE = [-10 10];
     end
@@ -41,25 +43,25 @@ classdef GeneticAlgorithm
                 , obj.CHROMASOME_LENGTH_PER_DIMENSION * obj.numDimensions);
         end
         
-        % Run the Genetic Algorithm 
-        function [obj, bestIndividuals, bestFitnesses] = run(obj, log)
+        % Run the Genetic Algorithm
+        function [obj, bestIndividual, bestFitnesses] = run(obj, log)
             if nargin < 2
                 log = false;
             end
             % Run the Genetic Algorithm
             obj = obj.runSingleStep(log);
-            bestIndividuals = [];
-            bestFitnesses = [];
+            bestFitnesses = inf(obj.MAX_GENERATIONS);
             % evolve and evaluate
             while obj.generation < obj.MAX_GENERATIONS
                 % store the best fitness and individual
-                bestIndividuals = [bestIndividuals; obj.decode(obj.bestIndividual)];
-                bestFitnesses = [bestFitnesses; obj.bestFitness];
+                bestIndividual = obj.decode(obj.bestIndividual);
+                bestFitnesses(obj.generation) = obj.bestFitness;
                 if obj.numFitnesscalls >= obj.MAX_FITNESS_EVALUATIONS * obj.numDimensions
                     break;
                 end
                 obj = runSingleStep(obj, log);
             end
+            bestFitnesses = bestFitnesses(1:obj.generation);
         end
         
         % Run a single step of the Genetic Algorithm
@@ -75,7 +77,7 @@ classdef GeneticAlgorithm
                 obj = obj.evolvePopulation();
                 obj = obj.evaluatePopulation();
             end
-
+            
             % logging
             if log
                 fprintf('Generation: %d , NFC: %d\n', obj.generation, obj.numFitnesscalls);
@@ -118,7 +120,8 @@ classdef GeneticAlgorithm
             % Evolve the population
             obj.generation = obj.generation + 1;
             newPopulation = obj.population;
-            for i = 1:obj.POPULATION_SIZE/2
+            
+            for i = 1:floor(obj.POPULATION_SIZE/2)
                 % Select parents
                 parent1 = obj.selectParent();
                 parent2 = obj.selectParent();
@@ -131,14 +134,20 @@ classdef GeneticAlgorithm
                 newPopulation(i*2-1, :) = child1;
                 newPopulation(i*2, :) = child2;
             end
+
+            % Elitism
+            if obj.ELITISM
+                newPopulation(end, :) = obj.bestIndividual;
+            end
+
             obj.population = newPopulation;
         end
         
+        % Tournament selection
         function parent = selectParent(obj)
-            % Select a parent for crossover
-            % Tournament selection for minimization
+            % Select a parent for crossover using tournament selection
             tournament = randi(obj.POPULATION_SIZE, 1, obj.TOURNAMENT_SIZE);
-            % find the best individual in the tournament 
+            % find the best individual in the tournament
             % (its the lowest index as the population is sorted)
             i = min(tournament);
             parent = obj.population(i, :);
@@ -146,12 +155,19 @@ classdef GeneticAlgorithm
         
         function [child1, child2] = crossover(obj, parent1, parent2)
             if rand < obj.CROSSOVER_RATE
-                % Single point crossover
-                crossoverPoint = randi(length(parent1));
+                % Single point crossover 
+                if obj.ALTENATE_ENCODING
+                    crossoverPoint = randi(obj.numDimensions * obj.CHROMASOME_LENGTH_PER_DIMENSION);
+                else
+                    % with an additional chance at dimension boundaries
+                    possibleCrossoverPoints = [1:obj.CHROMASOME_LENGTH_PER_DIMENSION*obj.numDimensions ...
+                        (1:obj.numDimensions-1)*obj.CHROMASOME_LENGTH_PER_DIMENSION];
+                    crossoverPoint = possibleCrossoverPoints(randi(length(possibleCrossoverPoints)));
+                end
                 child1 = parent1;
                 child2 = parent2;
-                child1(crossoverPoint:end) = parent2(crossoverPoint:end);
-                child2(crossoverPoint:end) = parent1(crossoverPoint:end);
+                child1(1:crossoverPoint) = parent2(1:crossoverPoint);
+                child2(1:crossoverPoint) = parent1(1:crossoverPoint);
             else
                 child1 = parent1;
                 child2 = parent2;
@@ -175,10 +191,16 @@ classdef GeneticAlgorithm
         end
         
         function x = decode(obj, individual)
+
             % Decode the gene
             % split the gene into dimensions
-            dimensions = reshape(individual, obj.numDimensions ...
-                , obj.CHROMASOME_LENGTH_PER_DIMENSION);
+            if obj.ALTENATE_ENCODING
+                dimensions = reshape(individual, obj.CHROMASOME_LENGTH_PER_DIMENSION ...
+                    , obj.numDimensions);
+            else
+                dimensions = reshape(individual, obj.numDimensions ...
+                    , obj.CHROMASOME_LENGTH_PER_DIMENSION);
+            end
             geneMax = 2^obj.CHROMASOME_LENGTH_PER_DIMENSION - 1;
             range = obj.DIMENSION_RANGE(2) - obj.DIMENSION_RANGE(1);
             
@@ -187,7 +209,11 @@ classdef GeneticAlgorithm
                 % binary to decimal
                 xi = 0;
                 for j = 1:obj.CHROMASOME_LENGTH_PER_DIMENSION
-                    xi = xi + dimensions(i, j) * 2^(obj.CHROMASOME_LENGTH_PER_DIMENSION - j);
+                    if obj.ALTENATE_ENCODING
+                        xi = xi + dimensions(j, i) * 2^(obj.CHROMASOME_LENGTH_PER_DIMENSION - j);
+                    else
+                        xi = xi + dimensions(i, j) * 2^(obj.CHROMASOME_LENGTH_PER_DIMENSION - j);
+                    end
                 end
                 
                 % scale to the range
