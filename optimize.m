@@ -13,12 +13,12 @@ time = tic;
 
 % runMultipleTimes(fun, alg, D);
 % runAndPlot(fun, alg);
-summary = runAll(); display(summary);
+sm = runAll(); display(sm);
 
 toc(time)
 
 
-function summary = runAll()
+function summaries = runAll()
     funcs = {
             @Benchmark.elliptic ...
             @Benchmark.bentcigar ...
@@ -33,10 +33,10 @@ function summary = runAll()
     dims = [ 2 10 20 ];
     algs = { @GeneticAlgorithm @DifferentialEvolution };
     
-    summary = cell(length(funcs)*length(dims)*length(algs),7);
+    summaries = cell(length(funcs)*length(dims)*length(algs),7);
     
     figure('units','normalized','outerposition',[0.1 0 0.8 1]);
-    i = 1;
+    ii = 1;
     for d = dims
         for f = funcs
             % bestHistories = containers.Map('KeyType','char','ValueType','any');
@@ -45,9 +45,9 @@ function summary = runAll()
                 % summary = [summary; [ d, f, a, bf, af, sf]];
                 saveas(gcf, sprintf('plots/fitness_%d_%s_%s.png', d, func2str(cell2mat(f)) ...
                    , func2str(cell2mat(a))));
-                summary(i, :) = { d, func2str(cell2mat(f)), func2str(cell2mat(a)), bf, af, sf, solution };
+                summaries(ii, :) = { d, func2str(cell2mat(f)), func2str(cell2mat(a)), bf, af, sf, solution };
                 % bestHistories(func2str(cell2mat(a))) = bestHistory;
-                i=i+1;
+                ii = ii + 1;
             end
                 
             % % plot histories as multiple lines
@@ -122,7 +122,8 @@ function [best, avg, stdv, bestSolution] = runMultipleTimes(fun, alg, D)
         
         overallBestFitness(i) = bestFitnessHistory(end);
         bestIndividuals{i} = bestIndividual;
-        fprintf('Run %d: Best fitness = %f , Solution: %s\n', i, bestFitnessHistory(end), bestIndividual);
+        fprintf('Run %d: Best fitness = %f , Solution: %s\n', i, bestFitnessHistory(end), ...
+                 strjoin(arrayfun(@(x) sprintf('%f', x), bestIndividual, 'UniformOutput', false), ', '));
 
         % if bestFitnessHistory(end) == min(overallBestFitness)
         %     bestHistoryRun = bestFitnessHistory;
