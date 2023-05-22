@@ -33,47 +33,50 @@ function summary = runAll()
     dims = [ 2 10 20 ];
     algs = { @GeneticAlgorithm @DifferentialEvolution };
     
-    summary = [];
+    summary = cell(length(funcs)*length(dims)*length(algs),7);
     
     figure('units','normalized','outerposition',[0.1 0 0.8 1]);
+    i = 1;
     for d = dims
         for f = funcs
-            bestHistories = containers.Map('KeyType','char','ValueType','any');
+            % bestHistories = containers.Map('KeyType','char','ValueType','any');
             for a = algs
-                [bf, af, sf, bestHistory] = runMultipleTimes(cell2mat(f), cell2mat(a), d);
-                summary = [summary; [ d, f, a, bf, af, sf]];
+                [bf, af, sf, solution] = runMultipleTimes(cell2mat(f), cell2mat(a), d);
+                % summary = [summary; [ d, f, a, bf, af, sf]];
                 saveas(gcf, sprintf('plots/fitness_%d_%s_%s.png', d, func2str(cell2mat(f)) ...
                    , func2str(cell2mat(a))));
-                bestHistories(func2str(cell2mat(a))) = bestHistory;
+                summary(i, :) = { d, func2str(cell2mat(f)), func2str(cell2mat(a)), bf, af, sf, solution };
+                % bestHistories(func2str(cell2mat(a))) = bestHistory;
+                i=i+1;
             end
                 
-            % plot histories as multiple lines
-            hold on;
-            cla;
-            % loop over map keys
-            for k = keys(bestHistories)
-                % get the value of the key
-                v = bestHistories(k{1});
-                % plot the best fitness chart in each iteration
-                if strcmp(k{1}, 'DifferentialEvolution')
-                    nfc = (0:length(v)-1)*200;
-                else
-                    nfc = (0:length(v)-1)*100;
-                end
-                plot(nfc,v, 'DisplayName', k{1});
-            end
-            title('Best Fitness in each iteration');
-            funcstr = regexprep(func2str(cell2mat(f)), '.*\.', '');
-            funcstr(1) = upper(funcstr(1));
-            subtitle(sprintf('%s , dimensions = %d',  funcstr , d));
-            xlabel('Number of fitness calls');
-            ylabel('Best Fitness (log scale)');
-            set(gca, 'YScale', 'log');
-            set(gca, 'XMinorTick', 'on');
-            % show legend outside the plot
-            legend('Location', 'eastoutside');
-            hold off;
-            saveas(gcf, sprintf('plots/fitness_%d_%s.png', d, func2str(cell2mat(f))));
+            % % plot histories as multiple lines
+            % hold on;
+            % cla;
+            % % loop over map keys
+            % for k = keys(bestHistories)
+            %     % get the value of the key
+            %     v = bestHistories(k{1});
+            %     % plot the best fitness chart in each iteration
+            %     if strcmp(k{1}, 'DifferentialEvolution')
+            %         nfc = (0:length(v)-1)*200;
+            %     else
+            %         nfc = (0:length(v)-1)*100;
+            %     end
+            %     plot(nfc,v, 'DisplayName', k{1});
+            % end
+            % title('Best Fitness in each iteration');
+            % funcstr = regexprep(func2str(cell2mat(f)), '.*\.', '');
+            % funcstr(1) = upper(funcstr(1));
+            % subtitle(sprintf('%s , dimensions = %d',  funcstr , d));
+            % xlabel('Number of fitness calls');
+            % ylabel('Best Fitness (log scale)');
+            % set(gca, 'YScale', 'log');
+            % set(gca, 'XMinorTick', 'on');
+            % % show legend outside the plot
+            % legend('Location', 'eastoutside');
+            % hold off;
+            % saveas(gcf, sprintf('plots/fitness_%d_%s.png', d, func2str(cell2mat(f))));
 
         
         end
@@ -82,7 +85,7 @@ end
 
 
 
-function [best, avg, stdv, bestHistoryRun] = runMultipleTimes(fun, alg, D)
+function [best, avg, stdv, bestSolution] = runMultipleTimes(fun, alg, D)
 
     fprintf('\n%s , %s , dimensions = %d\n', func2str(fun), func2str(alg), D);
 
@@ -90,10 +93,11 @@ function [best, avg, stdv, bestHistoryRun] = runMultipleTimes(fun, alg, D)
     hold on;
     cla;
     overallBestFitness = inf(1,31);
+    bestIndividuals = cell(1,31);
     for i = 1:31
         % ge = DifferentialEvolution(fun, 2);
         ge = alg(fun, D);
-        [ge, ~, bestFitnessHistory] = ge.run();
+        [ge, bestIndividual, bestFitnessHistory] = ge.run();
 
         nfc = (0:length(bestFitnessHistory)-1)*ge.POPULATION_SIZE;
         if isa(ge, 'DifferentialEvolution')
@@ -117,16 +121,19 @@ function [best, avg, stdv, bestHistoryRun] = runMultipleTimes(fun, alg, D)
         legend('Location', 'eastoutside');
         
         overallBestFitness(i) = bestFitnessHistory(end);
-        fprintf('Run %d: Best fitness = %f\n', i, bestFitnessHistory(end));
+        bestIndividuals{i} = bestIndividual;
+        fprintf('Run %d: Best fitness = %f , Solution: %s\n', i, bestFitnessHistory(end), bestIndividual);
 
-        if bestFitnessHistory(end) == min(overallBestFitness)
-            bestHistoryRun = bestFitnessHistory;
-        end
+        % if bestFitnessHistory(end) == min(overallBestFitness)
+        %     bestHistoryRun = bestFitnessHistory;
+        %     bestSolution = bestIndividual;
+        % end
     end
     hold off;
 
     % calculate the best, mean and standard deviation of the best fitness across all runs
-    best = min(overallBestFitness);
+    [best, bi] = min(overallBestFitness);
+    bestSolution = bestIndividuals{bi};
     avg = mean(overallBestFitness);
     stdv = std(overallBestFitness);
     
