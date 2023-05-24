@@ -73,7 +73,6 @@ classdef Benchmark
         % Rastrigin’s Function
         % This is a multi-modal, separable function with a huge number of local optima.
         function result = rastrigin(input)
-            dimension = length(input);
             result = sum(input.^2 - 10 * cos(2*pi*input) + 10);
         end
         

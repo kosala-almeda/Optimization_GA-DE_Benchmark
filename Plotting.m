@@ -20,7 +20,8 @@ classdef Plotting
             Z = arrayfun(f2, X, Y);      % Evaluate the function on the grid
             
             % Plot the function using a surface plot with specified transparency and edge color
-            surf(X, Y, Z, "EdgeAlpha", 0.3, "FaceAlpha", 0.7);
+            surf(X, Y, Z, "FaceAlpha", 0.9, "EdgeAlpha", 0);
+            colormap turbo;
             
             % Label the axes and the plot
             xlabel('x');
@@ -41,8 +42,8 @@ classdef Plotting
             
             % Plot the function using filled contours
             contourf(X, Y, Z, 1000,  'LineColor', 'none');
-            colormap jet;
-            
+            colormap turbo;
+
             % Label the axes, add a color bar, and title the plot
             xlabel('x');
             ylabel('y');

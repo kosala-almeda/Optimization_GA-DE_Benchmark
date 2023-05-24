@@ -58,8 +58,9 @@ function summaries = runAll()
                 [bf, af, sf, solution] = runMultipleTimes(cell2mat(f), cell2mat(a), d);
                 
                 % Store the summary information
-                summaries(di+fi+ai-2, 1:6) = {d, func2str(cell2mat(f)), func2str(cell2mat(a)), bf, af, sf};
-                summaries(di+fi+ai-2, 7:6+d) = num2cell(solution);
+                i = (di-1)*length(funcs)*length(algs) + (fi-1)*length(algs) + ai;
+                summaries(i, 1:6) = {d, func2str(cell2mat(f)), func2str(cell2mat(a)), bf, af, sf};
+                summaries(i, 7:6+d) = num2cell(solution);
             end
             
             % Show the legend outside the plot
@@ -140,7 +141,7 @@ function runAndPlot(fun, alg)
     ge = alg(fun, 2);
 
     % Open maximized figure window
-    figure('units','normalized','outerposition',[0.1 0 0.7 1]);
+    figure('units','normalized','outerposition',[0.1 0 0.7 0.9]);
     Plotting.plotFunction3Dto2D(ge.objectiveFunction, [-10:0.1:+10], [-10:0.1:+10]);
     
     % Run a step plot and wait for user interaction
@@ -178,7 +179,14 @@ function plotall(ge)
     if ismethod(ge, 'decode')
         bestIndividual = ge.decode(bestIndividual);
     end
-    scatter(bestIndividual(1), bestIndividual(2), 'r*')
+    scatter(bestIndividual(1), bestIndividual(2), 'r*');
+
+    
+
+    % add next button on the figure
+    % uicontrol('Style', 'pushbutton', 'String', 'Next', 'Position', [20 20 50 20], 'Callback', 'uiresume(gcbf)');
+    % wait for user to press next button
+    % uiwait(gcf);
 
     hold off;
 
