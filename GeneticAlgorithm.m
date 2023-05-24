@@ -7,7 +7,6 @@ classdef GeneticAlgorithm
     properties(Constant)
         % Genetic Algorithm parameters
         POPULATION_SIZE = 100;
-        MAX_GENERATIONS = 1000;
         MAX_FITNESS_EVALUATIONS = 3000;
         CROSSOVER_RATE = 0.9;
         MUTATION_RATE = 0.01;
@@ -23,6 +22,7 @@ classdef GeneticAlgorithm
         objectiveFunction;
         numDimensions;
         population;
+        currentfitness;
         bestFitness;
         bestIndividual;
         generation;
@@ -41,6 +41,7 @@ classdef GeneticAlgorithm
             obj.numDimensions = numDimensions;
             obj.population = zeros(obj.POPULATION_SIZE ...
                 , obj.CHROMASOME_LENGTH_PER_DIMENSION * obj.numDimensions);
+            obj.currentfitness = inf(1, obj.POPULATION_SIZE);
         end
         
         % Run the Genetic Algorithm
@@ -50,16 +51,18 @@ classdef GeneticAlgorithm
             end
             % Run the Genetic Algorithm
             obj = obj.runSingleStep(log);
-            bestFitnesses = inf(obj.MAX_GENERATIONS);
+            bestFitnesses = zeros(ceil(obj.MAX_FITNESS_EVALUATIONS * obj.numDimensions/obj.POPULATION_SIZE), 1);
+            bestIndividual = obj.decode(obj.bestIndividual);
+            bestFitnesses(obj.generation) = obj.bestFitness;
             % evolve and evaluate
-            while obj.generation < obj.MAX_GENERATIONS
+            while obj.bestFitness > 0 && obj.numFitnesscalls < obj.MAX_FITNESS_EVALUATIONS * obj.numDimensions
                 % store the best fitness and individual
-                bestIndividual = obj.decode(obj.bestIndividual);
-                bestFitnesses(obj.generation) = obj.bestFitness;
                 if obj.numFitnesscalls >= obj.MAX_FITNESS_EVALUATIONS * obj.numDimensions
                     break;
                 end
                 obj = runSingleStep(obj, log);
+                bestIndividual = obj.decode(obj.bestIndividual);
+                bestFitnesses(obj.generation) = obj.bestFitness;
             end
             bestFitnesses = bestFitnesses(1:obj.generation);
         end
@@ -103,16 +106,15 @@ classdef GeneticAlgorithm
         % Evaluate and sort the population by fitness
         function obj = evaluatePopulation(obj)
             % Evaluate the population
-            popFitness = zeros(1, obj.POPULATION_SIZE);
             for i = 1:obj.POPULATION_SIZE
-                popFitness(i) = obj.fitness(obj.population(i, :));
+                obj.currentfitness(i) = obj.fitness(obj.population(i, :));
                 obj.numFitnesscalls = obj.numFitnesscalls + 1;
             end
             % Sort the population by fitness
-            [popFitness, index] = sort(popFitness);
+            [obj.currentfitness, index] = sort(obj.currentfitness);
             obj.population = obj.population(index, :);
             % Update the best fitness and individual
-            obj.bestFitness = popFitness(1);
+            obj.bestFitness = obj.currentfitness(1);
             obj.bestIndividual = obj.population(1, :);
         end
         

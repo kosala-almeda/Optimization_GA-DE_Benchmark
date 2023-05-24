@@ -7,7 +7,8 @@
 %   - Unimodal
 %   - Non-separable
 %   - Smooth but narrow ridge
-% 3) Discus Function 300 Unimodal
+% 3) Discus Function
+%   - Unimodal
 %   - Non-separable
 %   - With one sensitive direction
 % 4) Rosenbrock’s Function
